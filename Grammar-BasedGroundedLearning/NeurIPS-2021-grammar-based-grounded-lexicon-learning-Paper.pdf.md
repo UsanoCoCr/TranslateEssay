@@ -1,0 +1,271 @@
+# GPT-Academic Report
+## # Title:
+
+
+
+Grammar-Based Grounded Lexicon Learning
+
+## # Abstract:
+
+
+
+We present Grammar-Based Grounded Lexicon Learning (G2L2), a lexicalist approach toward learning a compositional and grounded meaning representation of language from grounded data, such as paired images and texts. At the core of G2L2 is a collection of lexicon entries, which map each word to a tuple of a syntactic type and a neuro-symbolic semantic program. For example, the word shiny has a syntactic type of adjective; its neuro-symbolic semantic program has the symbolic form λx.filter(x, SHINY), where the concept SHINY is associated with a neural network embedding, which will be used to classify shiny objects. Given an input sentence, G2L2 first looks up the lexicon entries associated with each token. It then derives the meaning of the sentence as an executable neuro-symbolic program by composing lexical meanings based on syntax. The recovered meaning programs can be executed on grounded inputs. To facilitate learning in an exponentiallygrowing compositional space, we introduce a joint parsing and expected execution algorithm, which does local marginalization over derivations to reduce the training time. We evaluate G2L2 on two domains: visual reasoning and language-driven navigation. Results show that G2L2 can generalize from small amounts of data to novel compositions of words.
+
+## # Meta Translation
+
+标题：基于语法的有基础词汇学习
+
+作者：毛家元；石浩跃；吴家骏；罗杰·P·利维；约书亚·B·坦尼鲍姆
+
+摘要：我们提出了一种基于语法的有基础词汇学习（G2L2）方法，用于从有基础数据（如图像和文本配对）中学习语言的组合和有基础的意义表示。G2L2的核心是一系列词汇条目，将每个词映射到一个由语法类型和神经符号语义程序构成的元组。例如，词汇 shiny 具有形容词的语法类型；它的神经符号语义程序具有符号形式 λx.filter(x, SHINY)，其中概念 SHINY 与神经网络嵌入相关联，用于对闪亮的物体进行分类。给定一个输入句子，G2L2首先查找与每个标记相关联的词汇条目。然后，它通过基于语法的词汇含义组合来推导出句子的意义作为可执行的神经符号程序。恢复的意义程序可以在有基础输入上执行。为了在指数级增长的组合空间中促进学习，我们引入了一种联合解析和预期执行算法，通过对推导进行局部边缘化以减少训练时间。我们在两个领域对G2L2进行评估：视觉推理和语言驱动导航。结果表明，G2L2可以从少量数据中进行泛化，并处理词汇的新组合。
+
+## # Introduction
+
+Human language learning suggests several desiderata for machines learning from language. Humans can learn grounded and compositional representations for novel words from few examples. These representations are grounded on contexts, such as visual perception. We also know how these words relate with each other in composing the meaning of a sentence. Syntax-the structured, order-sensitive relations among words in a sentence-is crucial in humans' learning and compositional abilities for language. According to lexicalist linguistic theories [30,37,9], syntactic knowledge involves a small number of highly abstract and potentially universal combinatory rules, together with a large amount of learned information in the lexicon: a rich syntactic type and meaning representation for each word.
+Fig. 1 illustrates this idea in a visually grounded language acquisition setup. The language learner looks at a few examples containing the novel word shiny (Fig. 1a). They also have a built-in, compact but universal set of combinatory grammar rules (Fig. 1b) that describes how the semantic program of words can be combined based on their syntactic types. The learner can recover the syntactic type of the novel word and its semantic meaining. For example, shiny is an adjective and its meaning can be grounded on visually shiny objects in images (Fig. 1c). This representation supports the interpretation of novel sentences in a novel visual context (Fig. 1d).
+In this paper, we present Grammar-Based Grounded Lexicon Learning (G2L2), a neuro-symbolic framework for grounded language acquisition. At the core of G2L2 is a collection of grounded lexicon entries. Each lexicon entry maps a word to (i) a syntactic type, and (ii) a neuro-symbolic semantic program. For example, the lexicon entry for the English word shiny has a syntactic type of objset/objset: it will compose with another constituent of type objset on its right, and produces a new Correspondence to Jiayuan Mao: jiayuanm@mit.edu. Project page: http://g2l2.csail.mit.edu.
+Figure 1: G2L2 learns from grounded language data, for example, by looking at images and reading parallel question-answer pairs. It learns a collection of grounded lexicon entries comprised of weights, syntax types, semantics forms, and optionally, grounded embeddings associated with semantic concepts. These lexicon entries can be used to parse questions into programs. constituent of syntactic type objset. For example, in Fig. 1d, the word shiny composes with the word cube and yields a new constituent of type objset. The neuro-symbolic semantic program for shiny has the form λx.filter(x, SHINY), where SHINY is a concept automatically discovered by G2L2 and associated with a learned vector embedding for classifying shiny objects. G2L2 parses sentences based on these grounded lexicon entries and a small set of combinatory categorial grammar [CCG;36] rules. Given an input question, G2L2 will lookup the lexicon entries associated with each token, and compose these lexical semantic programs based on their syntactic types.
+G2L2 takes a lexicalist approach toward grounded language learning and focuses on data efficiency and compositional generalization to novel contexts. Inspired by lexicalist linguistic theories, but in contrast to neural network-based end-to-end learning, G2L2 uses a compact symbolic grammar to constraint how semantic programs of individual words can be composed, and focuses on learning the lexical representation. This approach brings us strong data efficiency in learning new words, and strong generalization to new word compositions and sentences with more complex structures.
+We are interested in jointly learning these neuro-symbolic grounded lexicon entries and the grounding of individual concepts from grounded language data, such as by simultaneously looking at images and reading parallel question-answer pairs. This is particularly challenging because the number of candidate lexicon entry combinations of a sentence grows exponentially with respect to the sentence length. For this reason, previous approaches to lexicon learning have either assumed an expertannotated set of lexical entries [46] or only attempted to learn at very small scales [15]. We address this combinatory explosion with a novel joint parsing and expected execution mechanism, namely CKY-E2, which extends the classic CKY chart parsing algorithm. It performs local marginalization of distributions over sub-programs to make the search process tractable.
+In sum, our paper makes three specific contributions. First, we present the neuro-symbolic G2L2 model that learns grounded lexical representations without requiring annotations for the concepts to be learned or partial word meanings; it automatically recovers underlying concepts in the target domain from language and experience with their groundings. Second, we introduce a novel expected execution mechanism for parsing in model training, to facilitate search in the compositional grammarbased space of meanings. Third, through systematic evaluation on two benchmarks, visual reasoning in CLEVR [21] and language-driven navigation in SCAN [25], we show that the lexicalist design of G2L2 enables learning with strong data efficiency and compositional generalization to novel linguistic constructions and deeper linguistic structures.
+
+引言：
+
+人类语言学习为机器从语言中学习提供了几个期望。人类可以从少数例子中学习新词的有基础和组合表达方式。这些表达方式基于上下文，如视觉感知。我们还知道这些词在组成句子的意义时如何相互关联。句法-句子中词之间有结构化的，顺序敏感的关系-在人类的学习和语言组合能力中至关重要。根据词汇主义语言学理论（lexicalist linguistic theories) ,句法知识涉及少量高度抽象且潜在普遍的组合规则，以及词典中的大量学习信息: 词的丰富句法类型和含义表示。
+
+图1以一种在视觉环境中基于语言习得的设置来说明这一观点。语言学习者观察包含新词shiny的一些例子（图1a）。他们还具有内置的、紧凑但通用的组合语法规则（图1b），描述了基于句法类型如何组合单词的语义程序。学习者可以恢复新词的句法类型和它的语义含义。例如，shiny是一个形容词，它的含义可以与图像中的闪亮物体相联系（图1c）。这种表示支持在新的视觉背景下解释新句子（图1d）。
+
+在本文中，我们提出了一种基于语言获取概念（Grammar-Based Grounded Lexicon Learning, G2L2）的神经符号框架。G2L2的核心是一组概念的语言词典条目。每个词典条目将一个词映射到(i)一个句法类型，和(ii)一个神经符号语义程序。例如，英语单词shiny的词典条目的句法类型是objset/objset: 它会与其右侧类型为objset的其他成分进行组合，并产生一个新的句法类型为objset的成分。例如，在图1d中，shiny与cube一词进行组合，产生了类型为objset的新成分。shiny的神经符号语义程序形式为λx.filter(x, SHINY)，其中SHINY是由G2L2自动发现并与用于分类闪亮物体的学习向量嵌入相关联的概念。G2L2根据这些语言词典条目和一小组组合范畴语法规则（CCG;36）对句子进行解析。对于输入的问题，G2L2会查找与每个标记相关联的语言词典条目，并根据它们的句法类型来组合这些词汇语义程序。
+
+G2L2采用了基于词典的方法来进行语言学习，注重数据效率和对新环境的组合泛化能力。受词典主义语言学理论的启发，但与基于神经网络的端到端学习不同，G2L2使用了紧凑的符号语法来约束如何组合单词的语义程序，并专注于学习词汇表示。这种方法在学习新词时具有强大的数据效率，并且在学习新词组合和具有更复杂结构的句子时具有强大的泛化能力。
+
+我们有兴趣在根据语言获取的数据中联合学习这些神经符号语义词条和单个概念的内涵，例如同时查看图像并阅读并行的问题-答案对。这是特别具有挑战性的，因为一个句子的候选词典词条组合数量随句子长度呈指数增长。因此，以前的词典学习方法要么假设一个专家注释的词典条目集 [46]，要么只尝试在非常小的规模下进行学习[15]。我们通过一种新颖的联合解析和预期执行机制来解决这种方法的问题，即CKY-E2，它扩展了经典的CKY图解析算法。它通过对子程序的分布进行局部边际化来使搜索过程变得可行。
+
+总的来说，本文提供了三个具体的贡献。首先，我们提出了神经符号G2L2模型，可以学习具有基础的词汇表示，而不需要对要学习的概念进行注释或部分单词含义的信息; 它可以从语言和对它们的基础体验中自动恢复目标领域的基础概念。其次，我们引入了一种新颖的预期执行机制，用于模型训练中的解析，以便于在组合的语法空间中进行搜索。第三，通过对两个基准测试程序-清晰视觉推理（CLEVR）[21]和语言驱动的导航（SCAN）[25]的系统性评估，我们展示了G2L2的词汇主义设计能够实现对新语言结构和更深层次的语言结构的学习 ，具有较强的数据效率和组合泛化能力。
+
+## # Grammar-Based Grounded Lexicon Learning
+
+Our framework, Grammar-Based Grounded Lexicon Learning (G2L2) learns grounded lexicons from cross-modal data, such as paired images and texts. Throughout this section, we will be using the visual reasoning task, specifically visual question answering (VQA) as the example, but the idea itself can be applied to other tasks and domains, such as image captioning and language-driven navigation. 
+
+我们的框架，基于语法的基于语境的词典学习（G2L2），从跨模态数据中学习基于语境的词典，例如配对的图像和文本。在本节中，我们将使用视觉推理任务，具体来说是视觉问答（VQA）作为示例，但这个思想本身可以应用于其他任务和领域，如图像描述和语言驱动导航。
+
+## # III. Neuro-Symbolic Program Execution
+
+Selection: Obj1(0.9) Selection: Obj1(0.9)
+
+III. Neuro-Symbolic Program Execution
+
+神经符号程序执行
+
+In this section, we discuss the execution phase of the Grammar-Based Grounded Lexicon Learning (G2L2) approach. After the lexicon entries are retrieved for each token in the input sentence, the meaning of the sentence is derived as an executable neuro-symbolic program by composing the lexical meanings based on syntax. 
+
+在本节中，我们讨论了基于语法的基于实例的词汇学习（G2L2）方法的执行阶段。在为输入句子的每个标记检索到词汇项之后，通过按照语法组合词汇的含义，将句子的含义导出为可执行的神经符号程序。
+
+To execute the meaning program, the grounded inputs, such as paired images and texts, are used. The execution process involves selecting objects or regions of interest based on the given predicates in the lexical entries. For example, if the neuro-symbolic semantic program has the form λx.filter(x, SHINY), it means that objects with the attribute SHINY are to be selected. 
+
+为了执行含义程序，使用了与图像和文本配对的实例输入，执行过程涉及根据词汇项中给定的谓词来选择感兴趣的对象或区域。例如，如果神经符号语义程序的形式为λx.filter(x, SHINY)，则意味着要选择带有SHINY属性的对象。
+
+The execution process can also involve other operations, such as comparing objects based on their characteristics or actions, and making decisions based on the results. These operations are performed by neural networks associated with the corresponding concepts in the lexical entries.
+
+执行过程还可以涉及其他操作，例如根据对象的特征或行为进行比较，并根据结果做出决策。这些操作是由与词汇项中相应概念相关联的神经网络执行的。
+
+In the G2L2 approach, a joint parsing and expected execution algorithm is introduced to efficiently handle the exponentially growing compositional space. This algorithm performs local marginalization over derivations, reducing the training time. 
+
+在G2L2方法中，引入了一种联合解析和预期执行算法，以有效地处理递增的组合空间。该算法通过对推导进行局部边际化来减少训练时间。
+
+To evaluate the effectiveness of the Neuro-Symbolic Program Execution, G2L2 is evaluated on two domains: visual reasoning and language-driven navigation. The results demonstrate that G2L2 can generalize from small amounts of data to handle novel compositions of words.
+
+为了评估神经符号程序执行的有效性，我们在两个领域中对G2L2进行了评估：视觉推理和语言驱动的导航。结果表明，G2L2能够从少量数据中推广到处理单词的新组合。
+
+## # filter(CUBE)
+
+Figure 2: G2L2 parses the input sentence into an executable neuro-symbolic program by first (I) lookup the lexicon entry associated with each word, followed by (II) computes the most probable parsing tree and the corresponding tree with a chart parsing algorithm. The derived program can be grounded and executed on an image with a neuro-symbolic reasoning process [28] (III).
+G2L2 learns from a collection of VQA data tuples, containing an image, a question, and an answer to the question. In G2L2, each word type w is associated with one or multiple lexical entries, comprised of their syntactic types and semantic programs. Given the input question, G2L2 first looks up the lexicon entries associated with each individual token in the sentence (Fig. 2I). G2L2 then uses a chart parsing algorithm to to derive the programmatic meaning representation of the entire sentence by recursively composing meanings based on syntax (Fig. 2II). To answer the question, we execute the program on the image representation (Fig. 2III). During training, we compare the answer derived from the model with the groundtruth answer to form the supervision for the entire system. No additional supervision, such as lexicon entries for certain words or concept labels, is needed.     w is a symbolic program represented in a typed domain-specific language (DSL) and can be executed on the input image. Some programs contain concepts (in this case, SHINY) that can be visually grounded.
+
+图2：G2L2通过首先（I）查找与每个词相关联的词典条目，然后使用图表解析算法计算出最可能的解析树及其对应的树来将输入句子解析为可执行的神经符号程序。派生的程序可以通过神经符号推理过程[28]在图像上进行基于神经符号的地面化和执行（III）。
+G2L2从包含图像、问题和问题答案的VQA数据元组的集合中进行学习。在G2L2中，每个词类型w与一个或多个词典条目相关联，这些条目由它们的句法类型和语义程序组成。给定输入问题，G2L2首先查找与句子中每个单词对应的词典条目（图2I）。然后，G2L2使用图表解析算法通过递归组合基于语法的含义来推导出整个句子的编程化意义表示（图2II）。为了回答问题，我们在图像表示上执行该程序（图2III）。在训练过程中，我们将模型得出的答案与基准答案进行比较，以形成整个系统的监督。不需要额外的监督，比如某些单词或概念标签的词典条目。w是用类型化领域特定语言（DSL）表示的符号程序，可以在输入图像上执行。有些程序包含可以视觉化地地面化的概念（在本例中是SHINY）。
+
+## # Grounded Lexicon
+
+Typed domain specific language. G2L2 uses a DSL to represent word meanings. For the visual reasoning domain, we use the CLEVR DSL [21]. It contains object-level operations such as selecting all objects having a particular attribute (e.g., the shiny objects) or select all objects having a specific relationship with a certain object (e.g., the objects left of the cube). It also supports functions that respond to user queries, such as counting the number of objects or query a specific attribute (e.g., shape) of an object. The language is typed: most functions takes a set of objects or a single object as their inputs, and produce another set of objects. For example, the operation filter has the signature filter(objset, concept) → objset and returns all objects that have concept (e.g., all shiny objects) in the input set.
+Syntactic types. There are two types of syntactic types in G2L2: primitive and complex. * The primitive types are defined in the typed domain specific language (e.g., objset, int). A complex type, denoted as X/Y or X\Y, is a functor type that takes an argument of type Y and returns an object of type X. The direction of the slash indicates word order: for X/Y, the argument Y must appear on the right, whereas in X\Y, it must appear on the left. Note that X and Y can themselves be complex types, which allows us to define functor types with multiple arguments, such as (X\Y)/Z, or even functors with functor arguments (e.g., (X\Y)/(Z/Z)).
+In G2L2, the semantic type of a word meaning (in the DSL) together with a set of directional and ordering settings for its arguments (reflecting how the word and its arguments should be linearized in text) uniquely determines the word's syntactic type. For example, the syntactic type for word shiny is objset/objset. It first states that shiny acts as a function in meaning composition, which takes a subprogram that outputs a set of objects (e.g., filter(CUBE)) as its argument, and produces anew program whose output is also a set of objects, in this case, filter(filter(CUBE), SHINY) Second, it states the direction of the argument, which should come from its right.
+Neuro-symbolic programs. Some functions in the DSL involves concepts that will be grounded in other modalities, such as the visual appearance of an object and their spatial relationships. Taking the function filter as an example, its secondary argument concept should be associated with the visual representation of objects. In G2L2, the meaning of each lexicon entry may involve one more constants (called "concepts") that are grounded on other modalities, possibly via deep neural embeddings. In the case of shiny: λx.filter(x, SHINY). The concept SHINY is associated with a vector embedding in a joint visual-semantic embedding space, following Kiros et al. [24]. During program execution, we will be comparing the embedding of concept SHINY with object embeddings extracted from the input image, to filter out all shiny objects.
+Lexicon learning. G2L2 learns lexicon entries in the following three steps. (i) First, we enumerate all possible semantic meaning programs derived from the DSL. For example, in the visual reasoning domain, a candidate program is λx.filter(x, ?), where ? denotes a concept argument. When we try to associate this lexicon entry to the word shiny, the program is instantiated as λx.filter(x, SHINY), where SHINY is a new concept associated with a vector embedding. Typically, we set a maximum number of arguments for each program and constrain its depth. We explain how we set these hyperparameters for different domains in the supplementary material. (ii) Next, for programs that have a primitive type, we use its semantic type as the syntactic type (e.g., objset). For programs that are functions with arguments, we enumerate possible argument ordering of the arguments. For example, the program λx.filter(x, SHINY) has two candidate syntactic types: objset/objset (the argument is on its right in language) and objset\objset (the argument is on its left). (iii) Finally, we associate each candidate lexicon entry with a learnable scalar weight τ (•). It is typical for a single word having tens or hundreds of candidate entries, and we optimize these lexicon entry weights in the training process. In practice, we assume no lexical ambiguity, i.e., each word type has only one lexical entry. Thus, the ambiguity of parsing only comes from different syntactic derivation orders for the same lexical entries. This also allows us to prune lexicon entries that do not lead to successful derivations during training.
+
+# 准确翻译：
+
+基于语法的基础语义学习（G2L2）
+
+我们提出了基于语法的基础语义学习（G2L2），这是一种从基础数据（如成对的图像和文本）中学习语言的组合和基于基础的含义表征的词汇主义方法。G2L2的核心是一组词汇条目，将每个词映射到语法类型和神经符号语义程序的元组。例如，单词shiny具有形容词的语法类型；它的神经符号语义程序的符号形式为λx.filter(x, SHINY)，其中概念SHINY与神经网络嵌入相关联，用于对发光物体进行分类。给定输入句子，G2L2首先查找与每个标记相关联的词汇条目。然后，它通过根据语法组合词汇的含义推导出一个可执行的神经符号程序作为句子的含义。恢复的含义程序可以在基础的输入上执行。为了在指数级增长的组合空间中进行学习，我们引入了一个联合解析和预期执行算法，通过对推导进行局部边际化来减少训练时间。我们在两个领域上评估了G2L2：视觉推理和以语言驱动的导航。结果表明，G2L2可以从少量数据中推广到单词的新组合。
+
+基于类型的领域特定语言（DSL）
+
+G2L2使用DSL表示单词含义。对于视觉推理领域，我们使用CLEVR DSL [21]。它包含对象级的操作，例如选择具有特定属性（例如，发光对象）的所有对象，或选择与特定对象具有特定关系（例如，立方体左侧的对象）的所有对象。它还支持对用户查询进行响应的函数，例如计算对象的数量或查询对象的特定属性（例如形状）。这种语言是有类型的：大多数函数接受一组对象或一个对象作为其输入，并生成另一组对象。例如，操作filter的签名为filter(objset, concept)→ objset，并返回输入集中具有概念（例如，所有发光对象）的所有对象。
+
+语法类型
+
+G2L2中有两种类型的语法类型：原始和复杂。原始类型在有类型的领域特定语言中定义（例如，objset，int）。复杂类型表示为X/Y或X\Y，是一个接受类型为Y的参数并返回类型为X的对象的函数类型。斜杠的方向指示单词顺序：对于X/Y，参数Y必须出现在右边，而对于X\Y，它必须出现在左边。注意，X和Y本身可以是复杂类型，这使我们能够定义具有多个参数的函数类型，例如（X\Y）/Z，甚至具有函数参数的函数（例如（X\Y）/（Z/Z））。
+
+在G2L2中，单词含义（在DSL中）的语义类型以及其参数的方向和顺序设置（反映单词及其参数在文本中的线性化方式）唯一确定了单词的语法类型。例如，单词shiny的语法类型是objset/objset。它首先说明shiny在含义组合中充当一个函数，它接受一个输出一组对象的子程序（例如，filter(CUBE)）作为其参数，并生成一个新的程序，其输出也是一组对象，在这种情况下是filter(filter(CUBE), SHINY)。其次，它指定参数的方向，该参数应该来自其右边。
+
+神经符号程序
+
+DSL中的一些函数涉及将在其他模态中基础的概念，例如对象的视觉外观和它们的空间关系。以函数filter为例，它的第二个参数概念应该与对象的视觉表示相关联。在G2L2中，每个词汇条目的含义可能涉及一个或多个常量（称为“概念”），这些常量在其他模态中通过深度神经嵌入进行基础化。在shiny的情况下：λx.filter(x, SHINY)。概念SHINY与联合视觉-语义嵌入空间中的矢量嵌入相关联，遵循Kiros等人 [24]的方法。在程序执行期间，我们将比较概念SHINY的嵌入和从输入图像中提取的对象嵌入，以过滤出所有发光对象。
+
+词汇学习
+
+G2L2通过以下三个步骤学习词汇条目。 （i）首先，我们列举从DSL中派生出的所有可能的语义含义程序。例如，在视觉推理领域，候选程序是λx.filter(x, ?)，其中?表示概念参数。当我们尝试将此词汇条目与单词shiny关联时，程序被实例化为λx.filter(x, SHINY)，其中SHINY是一个与矢量嵌入相关联的新概念。通常，我们为每个程序设置最大参数数量并限制其深度。我们在补充材料中解释了如何为不同领域设置这些超参数。（ii）接下来，对于具有原始类型的程序，我们使用其语义类型作为语法类型（例如，objset）。对于具有参数的函数程序，我们列举了参数的可能顺序。例如，程序λx.filter(x, SHINY)有两种候选语法类型：objset/objset（参数在语言中位于其右边）和objset\objset（参数在语言中位于其左边）。 （iii）最后，我们将每个候选词汇条目与可学习的标量权重τ进行关联。一个单词通常有十几个或数百个候选条目，我们在训练过程中优化这些词汇条目权重。实际上，我们假设没有词汇歧义，即每个词类型只有一个词汇条目。因此，解析的歧义性仅来自不同的词汇条目的语法推导顺序。这也允许我们剪枝在训练过程中无法导致成功推导的词汇条目。
+
+## # Program Execution
+
+Any fully grounded programs (i.e., programs without unbound arguments) can be executed based on the image representation. We implement the Neuro-Symbolic Concept Learner [NS-CL; 28] as our differentiable program executor, which consists of a collection of deterministic functional modules to realize the operations in the DSL. NS-CL represents execution results in a "soft" manner: in the visual reasoning domain, a set of objects is represented as a vector mask m of length N , where N is the number of objects in the scene. Each element, m i can be interpreted as the probability that object i is in the set. For example, the operation λx.filter(x, SHINY) receives an input mask m and produces a mask m that selects all shiny objects in the input set. The computation has two steps: (i) compare the vector embedding of concept SHINY with all objects in the scene to obtain a mask m (SHINY) , denoting the probability of each object being shiny; (ii) compute the element-wise multiplication m = m m SHINY , which can be further used as the input to other functions. In NS-CL, the execution result of any program is fully differentiable w.r.t. the input image representation and concept embeddings (e.g., SHINY).
+
+任何完全基于概念嵌入并且没有未绑定参数的可实现的程序可以基于图像表示进行执行。我们将神经符号概念学习器（NS-CL；28）作为我们的可区分程序执行器进行实现，该执行器由一系列确定性的功能模块组成，以实现DSL中的操作。NS-CL以“软”方式表示执行结果：在视觉推理领域，一组对象被表示为长度为N的向量掩码m，其中N是场景中的对象数量。每个元素mi可以解释为对象i在该集合中的概率。例如，操作λx.filter(x, SHINY)接收输入掩码m，并产生一个掩码m，选择输入集合中的所有闪亮对象。该计算分为两个步骤：（i）将概念SHINY的向量嵌入与场景中的所有对象进行比较，获取和标记掩码m (SHINY)，表示每个对象是闪亮的概率；（ii）计算逐元素相乘m = m * m SHINY，可以进一步用作其他功能的输入。在NS-CL中，任何程序的执行结果都与输入图像表示和概念嵌入（例如SHINY）完全可区分。
+
+## # Joint Chart Parsing and Expected Execution (CKY-E2)
+
+G2L2 extends a standard dynamic programming algorithm for chart parsing (i.e., the CKY algorithm [22,45,10]) to compose sentence meaning from lexical meaning forms, based on syntax. Denote w i as the input word sequence. e j i the j-th lexicon entry associated with word w i , and τ (e j i ) the corresponding weight. Consider all possible derivation of the question {derivation k }, k = 1, 2, . . . . We define the following context-free probability distribution of derivations as:
+Algorithm 1 The CKY-E 2 algorithm.
+Input: wi: the input sentence; L: sentence length; e j i : the j-th lexicon entry associated with word wi; τ (e j i ): lexicon weights. Output: exe k the execution result of the all possible derivations and their weights τ (exe k ). 1:  That is, the probability is exponentially proportional to the total weights τ (e) of all lexicon entries e ∈ derivation k used by the specific derivation.
+for i ← 0 to L -1 do 2: Initialize dp[i, i + 1 ]
+A straightforward implementation to support joint learning of lexicon weights τ and neural modules (e.g., filter(x, SHINY)), is to simply execute all possible derivations on the input image, and compare the answer with the groundtruth. However, the number of possible derivations grows exponentially as the question length, making such computation intractable. For example, in SCAN [25], each word has 178 candidate lexicons, and the number of lexicon combination of a sentence with 5 words will be 178 5 ≈ 10 11 . To address this issue, we introduce the idea of expected execution, which essentially computes the "expected" execution result of all possible derivations. We further accelerate this process by taking local marginalization.
+Our CKY-E2 algorithm is illustrated in Algorithm. 1. It processes all spans [left, right) sequentially ordered by their length. The composition for derivations of [left, right) has two stages. First, it enumerates possible split point k and tries to combine the derivation of [left, k) and [k, right). This step is identical to the standard CKY parsing algorithm. Next, if there are two derivations x and y of span [i, j), whose program structures are identical except for subtrees that can be partially evaluated (i.e., does not contain any unbounded arguments), we will compress these two derivations into one, by marginalizing the execution result for that subtree.
+See the example from Fig. 4. Two programs have the identical structure, except for the second argument to the outer-most relate operation. However, these sub-trees, highlighted in gray, can be partially evaluated on the input image, and both of them output a vector of scores indicating the objects being selected. Denote τ 1 and τ 2 as the weight associated with two derivations, and v 1 and v 2 the partial evaluation results (vectors) for two subtrees. We will replace these two candidate meaning form with z: z := λx.relate(x, v , RIGHT), where v :=
+τ 1 v 1 + τ 2 v 2 τ 1 + τ 2 , τ (z) := τ 1 + τ 2 .
+We provide additional running examples of the algorithm in the supplementary material.
+Complexity. Intuitively, once we have determined the semantics of a constituents in the question, the actual concrete meaning form of the derivation does not matter for future program execution, if the meaning form can already be partially evaluated on the input image. This joint parsing and expected execution procedure significantly reduces the exponential space of possible parsing to a polynomial space w.r.t. the number of possible program layouts that can not be partially evaluated, which, in practice, is small. The complexity of CKY-E2 is polynomial with respect to the length L of the sentence, and M the number of candidate lexicon entries. More specifically, O(L 3 M ), where O(L 3 ) comes from the chart parsing algorithm, and the number of derivations after the expected execution procedure is O(M ). This result is obtained by viewing the maximum arity for functor types being a constant (e.g., 2). Intuitively, for each span, all possible derivations associated with this span can be grouped into 4 categories: derivations of a primitive type, derivations of a 1-ary functor type, derivations of a 2-ary functor type, and derivations of a 2-ary functor type, with one argument binded. All these numbers grow linearly w.r.t. M . For detailed analysis please refer to our supplementary material.
+Correctness. One can theoretically prove that, if all operations in the program layout are commutative with the expectation operator, i.e., if
+E ([f (x)] = f (E [x]
+), our CKY-E2 produces exact computation of the expected execution result. These operations include, tensor addition, multiplication (if tensors are independent), and concatenation, which cover most of the computation we will do in neurosymbolic program execution. For example, for filter, taking the expectation over different inputs before doing the filtering is the same as taking the expectation over the filter results of different inputs. However, there are operations such as quantifiers whose semantics are not commutative with the expectation operator. In practice, it is possible to still use the expected expectation framework to approximate. We leave the application of other approximated inference techniques as future work.
+We provide proofs and its connections with other formalisms in the supplementary material.
+
+基于CKY-E2的联合图解析和期望执行（CKY-E2）算法章节的翻译如下：
+
+G2L2算法将CKY算法（即Chart Parsing的标准动态规划算法[22,45,10]）扩展为基于句法的词汇含义形式的句子含义组合。设wi为输入词序列，ej_i为与词wi相关联的第j个词汇条目，τ(ej_i)为相应的权重。考虑问题{推导k}的所有可能的推导，k = 1, 2, ...。我们定义以下上下文无关概率派生分布：
+算法1 CKY-E2算法。
+输入：wi：输入句子；L：句子长度；ej_i：与词wi相关联的第j个词汇条目；τ(ej_i)：词汇权重。输出：可以执行所有可能的派生的exe_k和它们的权重τ(exe_k)。即，概率与特定派生使用的所有词汇条目e ∈ 推导k的总权重τ(e)成比例。
+for i ← 0 到 L-1 do 2：初始化dp[i, i + 1]
+支持联合学习词汇权重τ和神经模块（例如filter(x, SHINY)）的直接实施方法是在输入图像上执行所有可能的推导，并将结果与真值进行比较。然而，由于问题长度的增加，可能的推导数量呈指数级增长，这使得这种计算变得难以处理。例如，在SCAN [25]中，每个单词有178个候选词汇，而包含5个单词的句子的词汇组合数量约为178^5 ≈ 10^11。为了解决这个问题，我们引入了期望执行的概念，它本质上计算所有可能推导的“期望”执行结果。我们通过进行局部边际化来进一步加速这个过程。
+我们的CKY-E2算法在算法1中示例化。它按其长度按序处理所有间距[left, right)。[left, right)的推导组合有两个阶段。首先，它枚举可能的分割点k，并尝试组合[left, k)和[k, right)的推导。这一步与标准的CKY解析算法相同。接下来，如果有两个推导x和y的范围为[i, j)，它们的程序结构除了可以部分计算求值的子树（即不包含任何无界参数）外完全相同，我们将这两个推导压缩成一个推导，通过边际化执行该子树的执行结果。
+请参考图4中的示例。两个程序具有相同的结构，除了最外层相关操作的第二个参数。然而，这些用灰色标出的子树可以在输入图像上进行部分计算求值，并且它们都输出一组得分向量，指示所选择的对象。将τ_1和τ_2表示为与两个推导相关联的权重，v_1和v_2表示两个子树的部分计算求值结果（向量）。我们将这两个候选意义形式用z代替：z := λx.relate(x, v, RIGHT)，其中v := (τ_1v_1 + τ_2v_2) / (τ_1 + τ_2)，τ(z) := τ_1 + τ_2。
+我们在附加材料中提供了算法的额外运行示例。
+复杂性。直观地说，一旦我们确定了问题中组成部分的语义，如果该组成部分的具体含义形式已经可以在输入图像上进行部分计算求值，则具体含义形式对于未来的程序执行就不重要了。这种联合解析和期望执行过程将可能解析的指数空间显着减少到多项式空间，这与无法部分计算求值的可能程序布局的数量有关，实际上这个数量很小。CKY-E2的复杂性与句子长度L和候选词汇条目数M多项式相关。具体来说，是O(L^3M)，其中O(L^3)来自图解析算法，经过期望执行过程后的推导数为O(M)。通过将谓词类型的最大解空间视为常量（例如2），得到了这个结果。直观地说，对于每个间距，与该间距相关的所有可能推导可以分为4个类别：原始类型的推导，一元函数类型的推导，二元函数类型的推导，以及有一个参数绑定的二元函数类型的推导。所有这些数字都与M成线性增长。详细分析请参见我们的附加材料。
+正确性。理论上可以证明，如果程序布局中的所有操作与期望操作符满足交换律，即
+E[f(x)] = f(E[x])，我们的CKY-E2可以产生期望执行结果的确切计算。这些操作包括张量加法、乘法（如果张量是独立的）和连接，它们涵盖了我们在神经符号程序执行中要进行的大部分计算。例如，对于filter操作，在进行过滤之前对不同输入进行期望与对不同输入的过滤结果进行期望是一样的。然而，有些操作（如量词）的语义与期望操作符不满足交换律。实际上，可以使用期望期望框架进行近似。我们将其他近似推理技术的应用作为未来的工作。
+我们在附加材料中提供了证明及其与其他形式主义的关系。
+
+## # Learning
+
+Our model, G2L2, can be trained in an end-to-end manner, by looking at images and reading paired questions and answers. We denote as a loss function that compares the output of a program execution (e.g., a probability distribution over possible answers) and the groundtruth. More precisely, given all possible derivations derivation k , the image representation I, the answer A, and the executor E(•, I), we optimize all parameters by minimizing the loss L:
+L = k (p(derivation k ) • (E(derivation k , I), A)) .
+In practice, we use gradient-based optimization for both the neural network weights in concept grounding modules and the lexicon weights τ .
+
+我们的模型G2L2可以通过查看图像和阅读配对的问题和答案进行端到端的训练。我们将应用一个损失函数来比较程序执行的输出（例如，可能答案的概率分布）和基准结果。更具体地说，给定所有可能的推导项derivation k ，图像表示I，答案A和执行器E(•, I)，我们通过最小化损失函数L来优化所有参数：
+L = k (p(derivation k ) • (E(derivation k , I), A)) 。
+在实践中，我们使用基于梯度的优化方法来优化概念基准模块中的神经网络权重以及词典权重τ。
+
+## # Experiment
+
+We evaluate G2L2 on two domains: visual reasoning in CLEVR [21] and language-driven navigation in SCAN [25]. Beyond the grounding accuracy, we also evaluate the compositional generalizability and data efficiency, comparing G2L2 with end-to-end neural models and modular neural networks.
+
+我们在两个领域上评估了G2L2的性能：CLEVR中的视觉推理[21]和SCAN中的语言驱动导航[25]。除了评估其基于基础知识的准确性外，我们还比较了G2L2与端到端神经模型和模块化神经网络在组合通用性和数据效率方面的性能。
+
+## # Visual Reasoning
+
+We first evaluate G2L2 on the visual reasoning tasks in the CLEVR domain [21], where the task is to reason and answer questions about images. In our study, we use a subset of CLEVR dataset, which does not include sentences that involve coreference resolution, and words with multiple meanings in different contexts. We add additional information on how we filter the dataset in the supplementary.
+Setup. Instead of using manually defined heuristics for curriculum learning or self-paced learning as in previous works [28,26], we employ a curriculum learning setup that is simply based on sentence length: we gradually add longer sentences into the training set. This helps the model to learn basic words from very short sentences (6 words), and use the acquired lexicon to facilitate learning longer sentences (20 words). Since CLEVR does not provide test set annotations, for all models, we held out 10% of the training data for model development and test them on the CLEVR validation split.
+Baselines. We compare G2L2 with 4 baselines. ( 1) MAC [19] is an end-to-end approach based on attention.
+(2) TbD-Net [29] uses a pre-trained semantic parser to parse the question into a symbolic  4) NS-CL [28] jointly learns a neural semantic parser and concept embeddings by looking at images and reading paired questions and answers. It requires the annotation for all concepts in the domain (e.g., colors and shapes). In contrast, G2L2 can automatically discover visual concepts from texts.
+Results. Table 1 summarizes the results. We consider any model that performs in the 95-100 range to have more or less solved the task. Small differences in numeric scores in this range, such as the fact that NS-CL outperforms our model on the "purple" generalization task by 0.2%, are less important than the fact that our model far outperforms all competitors on "count" compositional generalization and the "depth" generalization task, both of which all competitor models are far from solving.
+We first compare different models on the standard training-testing split. We train different models with either 10% or 100% of the training data and evaluate them on the validation set. Our model achieves a comparable performance in terms of its accuracy and data efficiency.
+Next, we systematically build three compositional generalization test splits: purple, right of, and count. The detailed setups and examples for these splits are provided in the supplementary. Essentially, we remove 90% of the sentences containing the word purple, the phrase right, and counting operations, such as how many ...? and what number of ...?. We only keep sentences up to a certain length (6 for purple, 11 for right, and 8 for count). We make sure that each use case of these words appear in training questions. After training, we test these models on the validation set with questions containing these words. Overall, our model G2L2 outperforms all baselines on all three generalization splits. In particular, it significantly outperforms other methods on the count split. The count split is hard for other method because it requires model to generalize to sentences with deeper structures, for example, from "how many red objects are there?" to "how many red objects are right of the cube?" Note that, during training, all models have seen example use of similar structures such as "what's the shape of the red object" and "what's the shape of the red object right of the cube?"
+Finally, we test generalization to sentences with deeper structures (depth). Specifically, we define the "hop number" of a question as the number of intermediate objects being referred to in order to locate the target object. For example, the "hop number" of the question "how many red objects are right of the cube?" is 1. We train different models on 0-hop and 1-hop questions and test them on 2-hop questions. Our model strongly outperforms all baselines.
+The results on the compositional generalization and depth splits yield two conclusions. First, disentangling grounded concept learning (associating words onto visual appearances) and reasoning (e.g., filtering or counting subsets of objects in a given scene) improves data efficiency and generalization. On CLEVR, neuro-symbolic approaches that separately identify concepts and perform explicit reasoning (NS-VQA, NS-CL and G2L2) consistently generalize better than approaches that do not (MAC, TbD). The comparison between TbD and NS-VQA is informative: TbD fails on the "right of" task even in the case where the semantic parser is providing correct programs, while NS-VQA, Since G2L2 directly learns human-interpretable lexicon entries associated with each individual words, we can further inspect the failure cases made by it when the training accuracy does not converge to 0. We find that the most significant failure mode is the word and (e.g., jump and run) and after (e.g., jump after run). Both of them are treated as connectives in SCAN. Sometimes G2L2 fails to pick the syntax type S\V/V over the type V\V/V. The entry V\V/V will succeed in parsing most cases (e.g., jump and run), except that it will introduce ambiguous parsing for sentences such as "jump and run twice": jump and run twice vs. jump and run twice. Based on the definition of the SCAN, only the first derivation is valid. In contrast, using S\V/V resolves this ambiguity. Depending on the weight initialization and the example presentation order, G2L2 sometimes get stuck at the local optima of V\V/V. However, we can easily identify this by the training accuracies-G2L2 is able to reach perfect performance on all considered splits by simply retraining with another random seed, therefore, we only select those with 100% training accuracy as valid models.
+
+首先，我们在CLEVR领域的视觉推理任务中评估了G2L2的性能，该任务是对图像进行推理和回答问题。在我们的研究中，我们使用CLEVR数据集的一个子集，该子集不包含涉及共参考消解的句子，以及在不同语境中有多个含义的词。我们在补充材料中添加了有关如何过滤数据集的附加信息。
+
+实验设置。我们采用了一种基于句子长度的课程学习设置，而不是像以前的工作中使用手动定义的启发式方法或自主学习。我们逐渐将较长的句子加入到训练集中。这有助于模型从非常短的句子（6个词）中学习基本词汇，并使用已获得的词汇来促进学习较长的句子（20个词）。由于CLEVR没有提供测试集注释，对于所有模型，我们保留了10％的训练数据进行模型开发，并在CLEVR验证集上对其进行测试。
+
+基线模型。我们将G2L2与4个基线模型进行比较。 (1) MAC [19]是一种基于注意力机制的端到端方法。 (2) TbD-Net [29]使用预训练的语义解析器将问题解析为符号表示。 (3) NS-VQA [26]能够将问题解析为执行程序，并使用视觉表示进行推理。需要注意的是，与其他模型不同，G2L2可以自动从文本中发现视觉概念。
+
+结果。表1总结了结果。我们认为在95-100的范围内表现的模型可以说已经基本解决了任务。在这个范围内数字分数的微小差异不太重要，例如NS-CL在“紫色”综合泛化任务上优于我们的模型0.2%，比起其他竞争对手的重要性小。而我们的模型在“count”组合泛化和“depth”泛化任务上远远超过其他竞争对手。
+
+我们首先比较不同模型在标准的训练-测试分割上的表现。我们使用10％或100％的训练数据训练不同的模型，并在验证集上评估它们。我们的模型在准确性和数据效率方面达到了可比较的性能。
+
+接下来，我们系统地构建了三个组合泛化测试分割：紫色、在......右边和计数。关于这些分割的详细设置和示例在补充材料中提供。基本上，我们删除了90％包含单词"紫色"、短语"right of"以及包含计数操作（例如"How many ...?"和"What number of ...?"）的句子。我们只保留了一定长度的句子（紫色的长度为6，右边的长度为11，计数的长度为8）。我们确保这些单词的每种用法都出现在训练问题中。训练之后，我们在包含这些单词的验证集上测试这些模型。总体而言，我们的G2L2模型在所有三个组合泛化分割上均优于所有基线模型。特别是，在计数分割上，它明显优于其他方法。计数分割对其他方法来说很难，因为它要求模型将句子推广到具有更深层结构的情况，例如从"How many red objects are there?"到"How many red objects are right of the cube?"需要注意的是，在训练过程中，所有模型都看到了类似结构的示例用法，如"what's the shape of the red object"和"what's the shape of the red object right of the cube?"
+
+最后，我们测试对具有更深层结构的句子（深度）的泛化。具体来说，我们将问题的"跳数"定义为在定位目标对象之前所涉及的中间对象数量。例如，问题"How many red objects are right of the cube?"的"跳数"为1。我们对0-hop和1-hop问题进行不同模型的训练，并在2-hop问题上对其进行测试。我们的模型明显优于所有基线模型。
+
+关于组合泛化和深度分割的结果得出了两个结论。首先，将基于视觉外观的概念学习（将单词关联到视觉外观）和推理（例如，在给定场景中过滤或计数对象的子集）解耦合可以提高数据效率和泛化能力。在CLEVR上，分别识别概念并执行显式推理（NS-VQA，NS-CL和G2L2）的神经符号方法要比那些不执行推理的方法（MAC，TbD）更好地泛化。TbD与NS-VQA之间的比较非常有启发性：即使在语义解析器提供正确程序的情况下，TbD仍然无法在"right of"任务上成功，而NS-VQA则可以成功。由于G2L2直接学习与每个单词相关的人可解释的词汇条目，因此我们可以进一步检查当训练准确性不收敛到0时G2L2的失败案例。我们发现最重要的失败模式是连词and（例如，jump and run）和after（例如，jump after run）。它们在SCAN中被视为连接词。有时，G2L2在选择语法类型S\V/V与类型V\V/V之间会失败。词条V\V/V在大多数情况下（例如，jump and run）可以成功解析，只是对于"jump and run twice"这样的句子会引入模棱两可的解析："jump and run twice"与"jump and run twice"。根据SCAN的定义，只有第一个推导是有效的。相比之下，使用S\V/V可以解决这种模棱两可性。根据权重的初始化和示例的呈现顺序，G2L2有时会陷入V\V/V的局部最优解。然而，我们可以通过使用另一个随机种子重新训练来轻松识别出这一点。因此，我们只选择训练准确性达到100％的模型作为有效模型。
+
+## # Related Work
+
+Lexicalist theories. The lexicalist theories of syntax [30,37,9] propose that 1) the key syntactic principles by which words and phrases combine are extremely simple and general, and 2) nearly all of the complexity in syntax can be attributed to rich and detailed lexical entries for the words in the language. For example, whereas the relationship between the active and passive voice, e.g., "Kim saw a balloon" versus "A balloon was seen by Kim", was treated in pre-lexicalist theories as a special syntactic rule converting between the sentences, in lexicalist theories this relationship derives simply from the knowledge that the passive participle for the verb "see" is "seen," which interacts with knowledge of other words to make both the active and passive forms of the sentence possible.
+In lexicalist theories, the problem for the language learner thus becomes a problem of learning the words in the language, not a problem of learning numerous abstract rule schemas. The combinatory categorial grammar [CCG; 36] framework we use is a well-established example of a lexicalist theory: there is a universal inventory of just three combinatory rules (Fig. 1a), but those rules can only be applied once richly specified lexical entries are learned for the words in a sentence. We believe that this lexicalist-theory approach is a particularly good fit to the problem of grounded language learning: the visual context provides clues to the word's meaning, and the word's grammatical behavior is tied closely to this meaning, making learning efficient.
+Compositional generalization in NLP. Improving the compositional generalization of natrual langauge processing (NLP) systems have drawn great attention in recent years [8]. Most of the recent approaches towards this goal are mostly built on deep learning-based models. There are two representative approaches: building structured neural networks with explicit phrase-based structures or segments [35,49,39,32]; and using data augmentation techniques [3,16,2]. However, these approaches either rely on additional annotation or pretrained models for phrase structure inference or require domain-specific heuristics in data augmentation. In contrast to both approaches, we propose to use combinatory grammar rules to constrain the learning of word meanings and how they compose.
+Neural latent trees. CKY-E2 is in spirit related to recent work using CKY-style modules for inducing latent trees. However, our model is fundamentally different from works on unsupervised constituency parsing [23,34] which use the CKY algorithm for inference over scalar span scores and those compute span representation vectors with CKY-style algorithms [27, 11, inter alia]. Our key contribution is to introduce the expected execution mechanism, where each span is associated with weighted, compressed programs. Beyond enumerating all possible parsing trees as in [27], G2L2 considers all possible programs associated with each span. Our expected execution procedure works for different types (object set, integer, etc.) and even functor types. This makes our approximation exact for linear cases and has polynomial complexity.
+Grammar-based grounded language learning. There have also been approaches for learning grammatical structures from grounded texts [33,48,20,7,31,41]. However, these approaches either rely on pre-defined lexicon entries [7], or only focus on inducing syntactic structures such as phrase-structure grammar [33]. Different from them, G2L2 jointly learns the syntactic types, semantic programs, and concept grounding, only based on a small set of combinatory grammar rules.
+Grammar-based and grounded language learning have also been studied in linguistics, with related work to ours studying on how humans use grammar as constraints in learning meaning [37] and how learning syntactic rules and semantic meanings in language bootstrap each other [1,40]. However, most previous computational models have focused only on explaining small-scale lab experiments and do not address grounding in visual perception [13,15]. In contrast, G2L2 is a neuro-symbolic model that integrates the combinatory categorial grammar formalism [36] with joint perceptual learning and concept learning, to directly learn meanings from images and texts.
+Neuro-symbolic models for language grounding. Integrating symbolic structures such as programs and neural networks has shown success in modeling compositional queries in various domains, including image and video reasoning [18,29], knowledge base query [4], and robotic planning [6].
+In this paper, we use symbolic domain-specific languages with neural network embeddings for visual reasoning in images and navigation sequence generation, following NS-CL [28]. However, in contrasts to using neural network-based semantic parser as in the aforementioned papers, our model G2L2 focuses on learning grammar-based lexicon for compositional generalization in linguistic structures, such as novel word composition.
+
+相关工作
+
+词汇主义理论。词汇主义语法理论[30,37,9]认为：1）词和短语组合的关键句法原则非常简单和通用；2）语法中的几乎所有复杂性都可以归因于对语言中的词的丰富和详细的词典条目。例如，之前的非词汇主义理论认为，主动和被动语态之间的关系，例如"Kim saw a balloon"与"A balloon was seen by Kim"，是依靠一个特殊的句法规则将这两个句子进行转换的。而在词汇主义理论中，这种关系仅仅是因为我们知道"see"这个动词的被动分词是"seen"，而其他词的知识与之相互作用，从而使得主动和被动形式都成为可能。
+
+在词汇主义理论中，语言学习者面临的问题就是学习语言中的词，而不是学习众多抽象的规则模式。我们使用的组合型范畴语法[36]框架是词汇主义理论的一个明显例子：它只包含了一个普遍存在的三个组合规则(如图1a所示)，但这些规则只能在学习了句子中词的丰富规范词典条目后才能应用。我们认为，这种词汇主义的方法非常适合于基于语境学习的语言学习问题：视觉环境为词的意义提供了线索，而词的语法行为与其意义密切相关，从而提高了学习的效率。
+
+自然语言处理中的组合性泛化。近年来，改进自然语言处理(NLP)系统的组合性泛化能力引起了广泛关注[8]。为实现这一目标，最近的方法大都基于基于深度学习的模型。有两种典型的方法：建立具有显式短语结构或分段的结构化神经网络[35,49,39,32]；使用数据增强技术[3,16,2]。然而，这些方法要么依赖于额外的注释或预先训练的模型进行短语结构推理，要么需要领域特定的启发式方法进行数据增强。与这两种方法相比，我们提出使用组合语法规则来约束单词意义及其组合的学习。
+
+神经潜树。CKY-E2与最近使用CKY风格模块引导潜树归纳的工作在精神上相关。然而，我们的模型与关于无监督组分句法分析的工作[23,34]完全不同，后者使用CKY算法对标量跨度分数进行推理，并使用CKY样式的算法计算跨度表示向量[27, 11等等]。我们的主要贡献是引入了预期执行机制，其中每个跨度与加权压缩程序相关联。与[27]中列举所有可能的解析树不同，G2L2考虑了与每个跨度相关的所有可能程序。我们的预期执行过程适用于不同类型(对象集，整数等)甚至是函数类型。这使得我们的近似方法在线性情况下是精确的，并具有多项式的复杂性。
+
+基于语法的基于语境的语言学习。已经有一些方法从基于语境的文本中学习语法结构[33,48,20,7,31,41]。然而，这些方法要么依赖于预定义的词典条目[7]，要么只专注于诱导句法结构，如短语结构语法[33]。与它们不同，G2L2通过使用一小组组合语法规则来联合学习句法类型、语义程序和概念建立。
+
+基于语法和基于语境的语言学习在语言学中也有研究，相关工作研究人们如何在学习意义时使用语法约束[37]，以及语法规则和语义意义如何互相启动[1,40]。然而，大多数先前的计算模型只关注解释小规模的实验室实验，并没有涉及在视觉感知中的语境建立[13,15]。相比之下，G2L2是一个神经符号模型，将组合范畴语法形式[36]与联合感知学习和概念学习相结合，直接从图像和文本中学习意义。
+
+语言语境下的神经符号模型。将符号结构（如程序和神经网络）与各种领域中的组合查询模型集成已经在图像和视频推理[18,29]、知识库查询[4]和机器人规划[6]等领域取得了成功。
+
+在本文中，我们使用基于神经网络嵌入的符号特定领域语言来进行图像推理和导航序列生成，遵循NS-CL [28]。然而，与前述论文中使用基于神经网络的语义解析器不同，我们的模型G2L2专注于学习基于语法的词汇表，以实现语言结构的组合性泛化，如新词组合的学习。
+
+## # Conclusion and Discussion
+
+In this paper, we have presented G2L2, a lexicalist approach towards learning compositional and grounded meaning of words. G2L2 builts in a compact but potentially universal set of combinatory grammar rules and learns grounded lexicon entries from a collection of sentences and their grounded meaning, without any human annotated lexicon entries. The lexicon entries represent the semantic type of the word, the ordering settings for its arguments, as well as the grounding of concepts in its semantic program. To facilitate lexicon entry induction in an exponentially-growing space, we introduced CKY-E2 for joint chart parsing and expected execution.
+Through systematical evaluation on both visual reasoning and language-driven navigation domains, we demonstrate the data efficiency and compositional generalization capability G2L2, and its general applicability in different domains. The design of G2L2 suggests several research directions. First, in G2L2 we have made strong assumptions on the context-independence of the lexicon entry as well as the application of grammar rules, the handling of linguistic ambiguities and pragmatics needs further exploration [14]. Second, meta-learning models that can leverage learned words to bootstrap the learning of novel words, such as syntactic bootstrapping [15], is a meaningful direction. Finally, future work may consider integrating G2L2 with program-synthesis algorithms [12] for learning of more generic and complex semantic programs.
+Broader impact. The ideas and techniques in this paper can be potentially used for building machine systems that can better understand the queries and instructions made by humans. We hope researchers and developers can build systems for social goods based on our paper. Meanwhile, we are aware of the ethical issues and concerns that may arise in the actual deployment of such systems, particularly biases in language and their grounding. The strong interpretability of the syntactic types and semantic programs learned by our model can be used in efforts to reduce such biases. 
+
+在本文中，我们提出了G2L2，一种学习词汇组成和语境相关含义的词汇主义方法。G2L2建立了一个简洁但潜在通用的组合语法规则集，并从一组句子及其语境相关含义中学习词汇条目，而无需任何人工注释的词汇条目。词汇条目表示单词的语义类型、其参数的排列顺序设置以及其语义程序中概念的基础。为了在指数级增长的空间中促进词汇条目归纳，我们引入了联合图表解析和期望执行的CKY-E2算法。
+
+通过对视觉推理和以语言驱动的导航领域的系统评估，我们展示了G2L2的数据效率和组合泛化能力，以及其在不同领域的普适性。G2L2的设计提出了几个研究方向。首先，在G2L2中，我们对词汇条目的上下文独立性以及语法规则的应用做出了强假设，对语言的歧义处理和语用学的处理需要进一步探索[14]。其次，元学习模型可以利用已学习的单词来启动对新单词的学习，例如句法引导[15]，这是一个有意义的方向。最后，未来的工作可能考虑将G2L2与程序合成算法[12]集成，以便学习更通用和复杂的语义程序。
+
+更广泛的影响。本文中的思想和技术可能被用于构建能更好理解人类提出的查询和指令的机器系统。我们希望研究人员和开发人员可以基于我们的论文构建社会公益的系统。同时，我们意识到实际部署此类系统可能引发的伦理问题和关切，特别是语言中的偏见及其语境相关。我们模型学习到的语法类型和语义程序的强解释性可以用于减少这类偏见的努力。
+
+## # Simple
+
+Compositional Generalization Length 10% 100% jump around right seq2seq [38] 0.93±0.05 0.99±0.01 0.00±0.00 † 0.00±0.00 † 0.15±0.02 Transformer [42] 0.71±0.24 0.78±0.11 0.00±0.00 0.10±0.08 0.02±0.01 GECA [3] 0.99±0.00 0.98±0.01 0.87±0.05 † 0.82±0.11 † 0.15±0.02 WordDrop [16]  * 0.56±0.02 0.62±0.02 0.52±0.02 0.70±0.06 0.18±0.01 SwitchOut [43]  * 0.99±0.01 0.99±0.01 0.98±0.02 0.97±0.02 0.17±0.02 SeqMix [16]  * --0.98 ‡ 0.89 ‡ recomb-2 [2] --0.88±0.07 † 0.82±0.08 † -G2L2 (ours)
+1.00±0.00 1.00±0.00 1.00±0.00 1.00±0.00 1.00±0.00 In contrast, the length, depth and "count" tests require generalizing to sentences that differ in multiple words from any training example. They appear to require -or at least benefit especially well from -G2L2 's lexical-grammatical approach to capturing meaning of complex utterances, with explicit constituent-level (as opposed to simply word-level) composition. We also provide in-depth analysis for the behavior of different semantic parsing models in the supplementary material.
+
+组合通用性 长度 10% 100% 跳跃 环绕 向右 seq2seq [38] 0.93±0.05 0.99±0.01 0.00±0.00 † 0.00±0.00 † 0.15±0.02 Transformer [42] 0.71±0.24 0.78±0.11 0.00±0.00 0.10±0.08 0.02±0.01 GECA [3] 0.99±0.00 0.98±0.01 0.87±0.05 † 0.82±0.11 † 0.15±0.02 WordDrop [16] * 0.56±0.02 0.62±0.02 0.52±0.02 0.70±0.06 0.18±0.01 SwitchOut [43] * 0.99±0.01 0.99±0.01 0.98±0.02 0.97±0.02 0.17±0.02 SeqMix [16] * --0.98 ‡ 0.89 ‡ recomb-2 [2] --0.88±0.07 † 0.82±0.08 † -G2L2 (我们的)
+1.00±0.00 1.00±0.00 1.00±0.00 1.00±0.00 1.00±0.00 相比之下，长度、深度和"count"测试需要泛化到与任何训练示例中的多个单词不同的句子。他们似乎需要-G2L2的词法-语法方法来捕捉复杂话语的意义，具有显式的组成部分级别（而不仅仅是词级别）组合。我们还在补充材料中对不同语义解析模型的行为进行了深入分析。
+
+## # Language-driven Navigation
+
+The second domain we consider is language-driven navigation. We evaluate models on the SCAN dataset [25]: a collection of sentence and navigational action sequence pairs. There are 6 primitive actions: jump, look, walk, run, lturn, and rturn, where an instruction turn left twice and run will be translated to lturn lturn run. All instructions are generated from a finite context-free grammar, so that we can systematically construct train-test splits for different types of compositional generalizations.
+Setup. We use a string-editing domain-specific language (DSL) for modeling the meaning of words in the SCAN dataset, of which the details can be found in the supplementary material. At a high level, the model supports three primitive operations: constructing a new constant string (consisting of primitive operations), concatenating two strings, and repeating the input string for a number of times.
+For G2L2, we generate candidate lexicons by enumerating functions in the string-editing DSL with up to 2 arguments and the function body has a maximum depth of 3. We also allow at most one of the argument being functor-typed, for example, V\V/(V\V). To handle parsing ambiguities, we use two primitive syntax types S and V , while both of them are associated with the semantic type of string.
+In total, we have 178 candidate lexicon entries for each word.
+Baselines. We compare G2L2 to seven baselines. (1) Seq2seq [38] trains an LSTM-based encoderdecoder model. We follow the hyperparameter setups of [25]. (2) Transformer [42] is a 4-head Transformer-based autoregressive seq2seq model. We tuned the hidden size (i.e., the dimension of intermediate token representations) within {100, 200, 400}, as well as the number of layers (for both the encoder and the decoder) from {2, 4, 8}. Other methods are based on different data augmentation schemes for training a LSTM seq2seq model. Specifically, (3) GECA augments the original training splits using heuristic span recombination rules; (4) WordDrop [16] performs random dropout for input sequence (while keeping the same label); (5) similarly, SwitchOut [43] randomly replaces an input token with a random token from the vocabulary; (6) SeqMix [16] uses soft augmentation techniques following [47], which composes an "weighted average" of different input sequences; (7) recomb-2 [2] learns recombination and resampling rules for augmentation.
+Results. We compare different models on three train-test splits. In Simple, the training and test instructions are drawn from the same distribution. We compare the data efficiency of various models 
+
+语言驱动的导航是我们考虑的第二个领域。我们在SCAN数据集[25]上评估模型：这是一组包含句子和导航动作序列对的数据集。数据集中包含了6个基本动作：跳跃、观察、步行、奔跑、向左转弯和向右转弯。例如，指令"向左转弯两次然后奔跑"将被转化为"向左转弯 向左转弯 奔跑"。所有的指令都是由一个有限无环文法生成的，因此我们可以系统地构建不同类型组合性推理的训练集和测试集。
+
+设置。我们使用了一种特定领域的字符串编辑领域特定语言(DSL)来建模SCAN数据集中的词汇意义，具体细节可以在补充材料中找到。在高层次上，该模型支持三种原始操作：构建一个新的字符串常量（由原始操作组成），将两个字符串连接起来，以及重复输入字符串多次。
+
+对于G2L2，我们通过枚举字符串编辑DSL中带有最多2个参数和3个最大深度的函数来生成候选词汇。我们还允许最多一个参数为函数类型，例如V\V/(V\V)。为了处理解析的歧义，我们使用了两种原始句法类型S和V，它们都与字符串的语义类型相关联。
+
+总共，对于每个词，我们有178个候选词汇条目。
+
+基准模型。我们将G2L2与七个基准模型进行比较。(1) Seq2seq [38] 训练了一个基于LSTM的编码-解码模型。我们按照[25]的超参数设置进行实验。(2) Transformer [42] 是一个基于Transformer的自回归seq2seq模型，我们在隐藏层大小（即中间标记表示的维度）在{100, 200, 400}范围内进行调整，以及编码器和解码器的层数在{2, 4, 8}范围内进行调整。其他方法都基于不同的数据增强方案来训练LSTM seq2seq模型。具体来说，(3) GECA使用启发式跨度重组规则对原始训练集进行数据增强；(4) WordDrop [16] 对输入序列进行随机丢弃（保持相同的标签）；(5) 同样地，SwitchOut [43] 随机用词汇表中的随机词替换输入标记；(6) SeqMix [16] 使用软数据增强技术，参考[47]，对不同的输入序列进行"加权平均"；(7) recomb-2 [2] 利用重组和重采样规则进行数据增强学习。
+
+结果。我们在三种训练集-测试集组合上比较了不同的模型。在Simple组合中，训练和测试指令来自相同的分布。我们比较了各种模型的数据效率。
+
